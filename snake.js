@@ -3,7 +3,7 @@ const NUM_ROWS = 17;
 
 let BODYSIZE;
 
-const NUM_FOOD = 5;
+const NUM_FOOD = 8;
 let snake;
 let foods = [];
 
@@ -26,17 +26,28 @@ function setup() {
 function windowResized() {
     BODYSIZE = int(min((windowWidth - 100) / NUM_COLS, (windowHeight - 100) / NUM_ROWS));
     resizeCanvas(NUM_COLS * BODYSIZE, NUM_ROWS * BODYSIZE);
+
+    foods.forEach((food) => food.onWindowResized());
 }
 
 function draw() {
-    // update
+    // update: snake movement and animations
     snake.update();
 
-    // draw
+    // update: food animation
+    foods.forEach((food) => food.updateSpawnAnimation());
+
+
+    // draw: background
     background(220);
+
+    // draw: food
     foods.forEach((food) => food.show());
+
+    // draw: snake
     snake.show();
 
+    // draw: text
     stroke(220);
     fill(0);
     text("Länge: " + snake.body.length, 0, 10);
@@ -301,9 +312,15 @@ class Bodypart {
 }
 
 // ------------------------------------------------------------------- food
+const FOOD_SPAWN_TIME_MS = 300;
+
 class Food {
     constructor() {
         this.currentPosition = createVector(0, 0);
+        this.currentDrawPosition = createVector(0, 0);
+        this.inSpawnAnimation = true;
+        this.spawnAnimationTime = 0;
+        this.currentSize = 0;
     }
 
     randomLocation() {
@@ -318,14 +335,38 @@ class Food {
                 continue;
             }
 
+            this.inSpawnAnimation = true;
+            this.spawnAnimationTime = 0;
+            this.currentSize = 0;
             break;
         } while (true);
+    }
+
+    onWindowResized() {
+        this.currentDrawPosition.set(this.currentPosition.x * BODYSIZE, this.currentPosition.y * BODYSIZE);
+        this.currentSize = BODYSIZE;
+    }
+
+    updateSpawnAnimation() {
+        if (this.inSpawnAnimation == false) {
+            return;
+        }
+        this.spawnAnimationTime += deltaTime;
+        if (this.spawnAnimationTime >= FOOD_SPAWN_TIME_MS) {
+            this.currentDrawPosition.set(this.currentPosition.x * BODYSIZE, this.currentPosition.y * BODYSIZE);
+            this.currentSize = BODYSIZE;
+            this.inSpawnAnimation = false;
+            return;
+        }
+        this.currentSize = lerp(0, BODYSIZE, this.spawnAnimationTime / FOOD_SPAWN_TIME_MS);
+        let offset = (BODYSIZE - this.currentSize) / 2;
+        this.currentDrawPosition.set(this.currentPosition.x * BODYSIZE + offset, this.currentPosition.y * BODYSIZE + offset);
     }
 
     show() {
         rectMode(CORNER)
         stroke(0);
         fill(255, 0, 0);
-        square(this.currentPosition.x * BODYSIZE, this.currentPosition.y * BODYSIZE, BODYSIZE);
+        square(this.currentDrawPosition.x, this.currentDrawPosition.y, this.currentSize);
     }
 }
