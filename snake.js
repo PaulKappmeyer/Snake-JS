@@ -13,7 +13,7 @@ let running = true;
 
 function setup() {
     calcBODYSIZE();
-    let canvas = createCanvas(NUM_COLS * BODYSIZE, NUM_ROWS * BODYSIZE);
+    let canvas = createCanvas(NUM_COLS * BODYSIZE + 3, NUM_ROWS * BODYSIZE + 3);
     canvas.parent(container);
 
     snake = new Snake();
@@ -28,7 +28,7 @@ function windowResized() {
     let OLD_BODYSIZE = BODYSIZE;
     // calc new size
     calcBODYSIZE()
-    resizeCanvas(NUM_COLS * BODYSIZE, NUM_ROWS * BODYSIZE);
+    resizeCanvas(NUM_COLS * BODYSIZE + 3, NUM_ROWS * BODYSIZE + 3);
 
     // pass old size
     foods.forEach((food) => food.onWindowResized());
@@ -54,6 +54,7 @@ function draw() {
 
     // draw: background
     background(220);
+    translate(1, 1);
 
     // draw: food
     foods.forEach((food) => food.show());
@@ -308,9 +309,9 @@ function isOppositeDirection(directionOne, directionTwo) {
     }
 }
 
-const MAX_R_CHANGE = 35;
-const MAX_G_CHANGE = 35;
-const MAX_B_CHANGE = 35;
+const MAX_R_CHANGE = 45;
+const MAX_G_CHANGE = 45;
+const MAX_B_CHANGE = 45;
 
 class Bodypart {
     constructor(x, y, partColor) {
@@ -333,9 +334,9 @@ class Bodypart {
         let r = red(partColor);
         let g = green(partColor);
         let b = blue(partColor);
-        let rChangeBound = random(0, MAX_R_CHANGE);
-        let gChangeBound = random(0, MAX_G_CHANGE);
-        let bChangeBound = random(0, MAX_B_CHANGE);
+        let rChangeBound = random(15, MAX_R_CHANGE);
+        let gChangeBound = random(15, MAX_G_CHANGE);
+        let bChangeBound = random(15, MAX_B_CHANGE);
         let newR = constrain(r + random(-rChangeBound, rChangeBound), 0, 255);
         let newG = constrain(g + random(-gChangeBound, gChangeBound), 0, 255);
         let newB = constrain(b + random(-bChangeBound, bChangeBound), 0, 255)
