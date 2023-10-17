@@ -12,10 +12,9 @@ const container = "snake-container";
 let running = true;
 
 function setup() {
-    let canvas = createCanvas(0, 0);
+    calcBODYSIZE();
+    let canvas = createCanvas(NUM_COLS * BODYSIZE, NUM_ROWS * BODYSIZE);
     canvas.parent(container);
-    windowResized();
-
 
     snake = new Snake();
 
@@ -26,16 +25,23 @@ function setup() {
 }
 
 function windowResized() {
-    BODYSIZE = int(min((windowWidth - 100) / NUM_COLS, (windowHeight - 100) / NUM_ROWS));
+    let OLD_BODYSIZE = BODYSIZE;
+    // calc new size
+    calcBODYSIZE()
     resizeCanvas(NUM_COLS * BODYSIZE, NUM_ROWS * BODYSIZE);
 
+    // pass old size
     foods.forEach((food) => food.onWindowResized());
+    snake.onWindowResized(OLD_BODYSIZE);
+}
+
+function calcBODYSIZE() {
+    BODYSIZE = int(min((windowWidth - 100) / NUM_COLS, (windowHeight - 100) / NUM_ROWS));
 }
 
 function draw() {
     if (!focused) {
         running = false;
-        return;
     }
 
     if (running) {
@@ -70,7 +76,7 @@ function draw() {
 
         textSize(100);
         textAlign(CENTER, CENTER);
-        text("PAUSED", width/2, height/2);
+        text("PAUSED", width / 2, height / 2);
     }
 }
 
@@ -233,6 +239,11 @@ class Snake {
         }
     }
 
+    onWindowResized(OLD_BODYSIZE) {
+        this.removed.forEach((part) => part.onWindowResized(OLD_BODYSIZE));
+        this.body.forEach((part) => part.onWindowResized(OLD_BODYSIZE));
+    }
+
     show() {
         // left border loop
         translate(-width, 0);
@@ -329,6 +340,10 @@ class Bodypart {
         let newG = constrain(g + random(-gChangeBound, gChangeBound), 0, 255);
         let newB = constrain(b + random(-bChangeBound, bChangeBound), 0, 255)
         return color(newR, newG, newB);
+    }
+
+    onWindowResized(OLD_BODYSIZE) {
+        this.smoothPosition.div(OLD_BODYSIZE).mult(BODYSIZE);
     }
 
     updateRemoveAnimation() {
