@@ -1,7 +1,7 @@
-const BODYSIZE = 50;
+const NUM_COLS = 33;
+const NUM_ROWS = 17;
 
-let NUM_COLS;
-let NUM_ROWS;
+let BODYSIZE;
 
 const NUM_FOOD = 5;
 let snake;
@@ -10,11 +10,10 @@ let foods = [];
 const container = "snake-container";
 
 function setup() {
-    NUM_COLS = int((windowWidth - 200) / BODYSIZE);
-    NUM_ROWS = int((windowHeight - 100) / BODYSIZE);
-
-    let canvas = createCanvas(NUM_COLS*BODYSIZE, NUM_ROWS*BODYSIZE);
+    let canvas = createCanvas(0, 0);
     canvas.parent(container);
+    windowResized();
+
 
     snake = new Snake();
 
@@ -22,6 +21,11 @@ function setup() {
         foods[i] = new Food();
         foods[i].randomLocation();
     }
+}
+
+function windowResized() {
+    BODYSIZE = int(min((windowWidth - 100) / NUM_COLS, (windowHeight - 100) / NUM_ROWS));
+    resizeCanvas(NUM_COLS * BODYSIZE, NUM_ROWS * BODYSIZE);
 }
 
 function draw() {
@@ -243,6 +247,10 @@ class Snake {
     }
 }
 
+const MAX_R_CHANGE = 35;
+const MAX_G_CHANGE = 35;
+const MAX_B_CHANGE = 35;
+
 class Bodypart {
     constructor(x, y, partColor) {
         if (y === undefined) {
@@ -264,9 +272,12 @@ class Bodypart {
         let r = red(partColor);
         let g = green(partColor);
         let b = blue(partColor);
-        let newR = constrain(r + random(-25, 25), 0, 255);
-        let newG = constrain(g + random(-25, 25), 0, 255);
-        let newB = constrain(b + random(-25, 25), 0, 255)
+        let rChangeBound = random(0, MAX_R_CHANGE);
+        let gChangeBound = random(0, MAX_G_CHANGE);
+        let bChangeBound = random(0, MAX_B_CHANGE);
+        let newR = constrain(r + random(-rChangeBound, rChangeBound), 0, 255);
+        let newG = constrain(g + random(-gChangeBound, gChangeBound), 0, 255);
+        let newB = constrain(b + random(-bChangeBound, bChangeBound), 0, 255)
         return color(newR, newG, newB);
     }
 
