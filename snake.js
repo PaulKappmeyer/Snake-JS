@@ -130,6 +130,7 @@ class Snake {
     constructor() {
         this.head = new Bodypart(0, 0, color(25, 255, 80));
         this.direction = "WEST";
+        this.desiredDirection = "WEST";
         this.head.targetPosition.add(1, 0);
         this.body = [this.head];
         let initalLength = 5;
@@ -192,6 +193,7 @@ class Snake {
         }
 
         // move
+        this.direction = this.desiredDirection;
         switch (this.direction) {
             case "NORTH":
                 this.head.targetPosition.add(0, -1);
@@ -272,26 +274,26 @@ class Snake {
     }
 
     setMoveDirection(desiredDirection) {
-        if (this.isOppositeDirection(desiredDirection)) {
+        if (isOppositeDirection(this.direction, desiredDirection)) {
             return;
         }
-        this.direction = desiredDirection;
+        this.desiredDirection = desiredDirection;
     }
+}
 
-    isOppositeDirection(direction) {
-        switch (this.direction) {
-            case "NORTH":
-                return direction == "SOUTH";
+function isOppositeDirection(directionOne, directionTwo) {
+    switch (directionOne) {
+        case "NORTH":
+            return directionTwo == "SOUTH";
 
-            case "SOUTH":
-                return direction == "NORTH";
+        case "SOUTH":
+            return directionTwo == "NORTH";
 
-            case "WEST":
-                return direction == "EAST";
+        case "WEST":
+            return directionTwo == "EAST";
 
-            case "EAST":
-                return direction == "WEST";
-        }
+        case "EAST":
+            return directionTwo == "WEST";
     }
 }
 
