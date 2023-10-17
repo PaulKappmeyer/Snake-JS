@@ -9,6 +9,8 @@ let foods = [];
 
 const container = "snake-container";
 
+let running = true;
+
 function setup() {
     let canvas = createCanvas(0, 0);
     canvas.parent(container);
@@ -31,12 +33,18 @@ function windowResized() {
 }
 
 function draw() {
-    // update: snake movement and animations
-    snake.update();
+    if (!focused) {
+        running = false;
+        return;
+    }
 
-    // update: food animation
-    foods.forEach((food) => food.updateSpawnAnimation());
+    if (running) {
+        // update: snake movement and animations
+        snake.update();
 
+        // update: food animation
+        foods.forEach((food) => food.updateSpawnAnimation());
+    }
 
     // draw: background
     background(220);
@@ -50,8 +58,20 @@ function draw() {
     // draw: text
     stroke(220);
     fill(0);
-    text("Länge: " + snake.body.length, 0, 10);
-    text("Highscore: " + snake.highscore, 0, 20);
+    textSize(12);
+    textAlign(LEFT, CENTER);
+    text("Länge: " + snake.body.length, 5, 10);
+    text("Highscore: " + snake.highscore, 5, 20);
+
+    if (!running) {
+        stroke(0);
+        fill(0, 0, 0, 100);
+        rect(0, 0, width, height);
+
+        textSize(100);
+        textAlign(CENTER, CENTER);
+        text("PAUSED", width/2, height/2);
+    }
 }
 
 // ------------------------------------------------------------------- input
@@ -59,6 +79,7 @@ const W_KEY = 87;
 const S_KEY = 83;
 const A_KEY = 65;
 const D_KEY = 68;
+const P_KEY = 80;
 
 function keyPressed() {
     switch (keyCode) {
@@ -81,7 +102,23 @@ function keyPressed() {
         case LEFT_ARROW:
             snake.setMoveDirection("EAST");
             break;
+
+        case P_KEY:
+            toggleRunning();
+            break;
     }
+}
+
+function mouseClicked() {
+    if (mouseX < 0 || mouseY < 0 || mouseX > width || mouseY > height) {
+        running = false;
+    } else {
+        running = true;
+    }
+}
+
+function toggleRunning() {
+    running = !running;
 }
 
 // ------------------------------------------------------------------- snake
