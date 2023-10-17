@@ -10,8 +10,8 @@ let foods = [];
 const container = "snake-container";
 
 function setup() {
-    NUM_COLS = (windowWidth - 500) / BODYSIZE;
-    NUM_ROWS = (windowHeight - 100) / BODYSIZE;
+    NUM_COLS = int((windowWidth - 200) / BODYSIZE);
+    NUM_ROWS = int((windowHeight - 100) / BODYSIZE);
 
     let canvas = createCanvas(NUM_COLS*BODYSIZE, NUM_ROWS*BODYSIZE);
     canvas.parent(container);
