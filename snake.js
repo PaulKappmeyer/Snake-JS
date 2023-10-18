@@ -155,10 +155,15 @@ class Snake {
         this.removed.forEach((part) => part.updateRemoveAnimation());
         this.removed = this.removed.filter((part) => alpha(part.partColor) > 0);
 
+        // update: spawn animation:
+        this.body.forEach((part) => part.updateSpawnAnimation());
+
         // update: move animation
         let lerpAmount = this.timeSinceLastMove / MOVE_ANIMATION_TIME_MS;
         //lerpAmount = constrain(lerpAmount, 0, 1);
         this.body.forEach((part) => part.updateMoveAnimation(lerpAmount));
+
+
 
         // update: move timer
         this.timeSinceLastMove += deltaTime;
@@ -314,6 +319,8 @@ const MAX_R_CHANGE = 45;
 const MAX_G_CHANGE = 45;
 const MAX_B_CHANGE = 45;
 
+const BODYPART_SPAWN_TIME_MS = 250;
+
 class Bodypart {
     constructor(x, y, partColor) {
         if (y === undefined) {
@@ -322,11 +329,19 @@ class Bodypart {
             this.targetPosition = other.currentPosition.copy();
             this.smoothPosition = other.currentPosition.copy().mult(BODYSIZE);
             this.partColor = this.modifyColor(other.partColor);
+
+            this.inSpawnAnimation = true;
+            this.spawnAnimationTime = 0;
+            this.currentSize = 0;
         } else {
             this.currentPosition = createVector(x, y);
             this.targetPosition = createVector(x, y);
             this.smoothPosition = createVector(x, y).mult(BODYSIZE);
             this.partColor = partColor;
+
+            this.inSpawnAnimation = false;
+            this.spawnAnimationTime = 0;
+            this.currentSize = BODYSIZE;
         }
         this.removeAnimationTime = 0;
     }
@@ -345,7 +360,30 @@ class Bodypart {
     }
 
     onWindowResized(OLD_BODYSIZE) {
-        this.smoothPosition.div(OLD_BODYSIZE).mult(BODYSIZE);
+        if (this.inSpawnAnimation) {
+            let offset = (OLD_BODYSIZE - this.currentSize) / 2;
+            this.smoothPosition.sub(offset, offset).div(OLD_BODYSIZE).mult(BODYSIZE);
+            this.currentSize = lerp(0, BODYSIZE, this.spawnAnimationTime / BODYPART_SPAWN_TIME_MS);
+            offset = (BODYSIZE - this.currentSize) / 2;
+            this.smoothPosition.add(offset, offset);
+        } else {
+            this.smoothPosition.div(OLD_BODYSIZE).mult(BODYSIZE);
+            this.currentSize = BODYSIZE;
+        }
+    }
+
+    updateSpawnAnimation() {
+        if (this.inSpawnAnimation == false) {
+            return;
+        }
+        this.spawnAnimationTime += deltaTime;
+        if (this.spawnAnimationTime >= BODYPART_SPAWN_TIME_MS) {
+            this.smoothPosition.set(this.currentPosition.x * BODYSIZE, this.currentPosition.y * BODYSIZE);
+            this.currentSize = BODYSIZE;
+            this.inSpawnAnimation = false;
+            return;
+        }
+        this.currentSize = lerp(0, BODYSIZE, this.spawnAnimationTime / BODYPART_SPAWN_TIME_MS);
     }
 
     updateRemoveAnimation() {
@@ -357,13 +395,18 @@ class Bodypart {
     updateMoveAnimation(lerpAmount) {
         this.smoothPosition = p5.Vector.lerp(this.currentPosition, this.targetPosition, lerpAmount);
         this.smoothPosition.mult(BODYSIZE);
+
+        if (this.inSpawnAnimation) {
+            let offset = (BODYSIZE - this.currentSize) / 2;
+            this.smoothPosition.add(offset, offset);
+        }
     }
 
     show() {
         stroke(0);
         fill(this.partColor);
         ellipseMode(CORNER);
-        circle(this.smoothPosition.x, this.smoothPosition.y, BODYSIZE);
+        circle(this.smoothPosition.x, this.smoothPosition.y, this.currentSize);
     }
 }
 
@@ -399,8 +442,14 @@ class Food {
     }
 
     onWindowResized() {
-        this.currentDrawPosition.set(this.currentPosition.x * BODYSIZE, this.currentPosition.y * BODYSIZE);
-        this.currentSize = BODYSIZE;
+        if (this.inSpawnAnimation) {
+            this.currentSize = lerp(0, BODYSIZE, this.spawnAnimationTime / FOOD_SPAWN_TIME_MS);
+            let offset = (BODYSIZE - this.currentSize) / 2;
+            this.currentDrawPosition.set(this.currentPosition.x * BODYSIZE + offset, this.currentPosition.y * BODYSIZE + offset);
+        } else {
+            this.currentDrawPosition.set(this.currentPosition.x * BODYSIZE, this.currentPosition.y * BODYSIZE);
+            this.currentSize = BODYSIZE;
+        }
     }
 
     updateSpawnAnimation() {
