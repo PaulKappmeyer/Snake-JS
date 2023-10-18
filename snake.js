@@ -160,7 +160,7 @@ class Snake {
 
         // update: move animation
         let lerpAmount = this.timeSinceLastMove / MOVE_ANIMATION_TIME_MS;
-        //lerpAmount = constrain(lerpAmount, 0, 1);
+        lerpAmount = constrain(lerpAmount, 0, 1);
         this.body.forEach((part) => part.updateMoveAnimation(lerpAmount));
 
 
@@ -176,6 +176,7 @@ class Snake {
         for (let i = this.body.length - 1; i >= 1; i--) {
             this.body[i].currentPosition.set(this.body[i - 1].currentPosition);
             this.body[i].targetPosition.set(this.body[i - 1].targetPosition);
+            this.body[i].didLooparound = this.body[i - 1].didLooparound;
         }
 
         // update head: grid position
@@ -207,6 +208,7 @@ class Snake {
 
         // move
         this.direction = this.desiredDirection;
+        this.head.didLooparound = false;
         switch (this.direction) {
             case "NORTH":
                 this.head.targetPosition.add(0, -1);
@@ -214,6 +216,7 @@ class Snake {
                 if (this.head.targetPosition.y < 0) {
                     this.head.currentPosition.add(0, NUM_ROWS);
                     this.head.targetPosition.add(0, NUM_ROWS);
+                    this.head.didLooparound = true;
                 }
                 break;
 
@@ -223,6 +226,7 @@ class Snake {
                 if (this.head.targetPosition.y >= NUM_ROWS) {
                     this.head.currentPosition.sub(0, NUM_ROWS);
                     this.head.targetPosition.sub(0, NUM_ROWS);
+                    this.head.didLooparound = true;
                 }
                 break;
 
@@ -232,6 +236,7 @@ class Snake {
                 if (this.head.targetPosition.x >= NUM_COLS) {
                     this.head.currentPosition.sub(NUM_COLS, 0);
                     this.head.targetPosition.sub(NUM_COLS, 0);
+                    this.head.didLooparound = true;
                 }
                 break;
 
@@ -241,6 +246,7 @@ class Snake {
                 if (this.head.targetPosition.x < 0) {
                     this.head.currentPosition.add(NUM_COLS, 0);
                     this.head.targetPosition.add(NUM_COLS, 0);
+                    this.head.didLooparound = true;
                 }
                 break;
         }
@@ -252,31 +258,6 @@ class Snake {
     }
 
     show() {
-        // left border loop
-        translate(-width, 0);
-        this.drawSnake();
-        translate(width, 0);
-
-        // right border loop
-        translate(width, 0);
-        this.drawSnake();
-        translate(-width, 0);
-
-        // top border loop
-        translate(0, -height);
-        this.drawSnake();
-        translate(0, height);
-
-        // top border looping
-        translate(0, height);
-        this.drawSnake();
-        translate(0, -height);
-
-        // normal drawing in view
-        this.drawSnake();
-    }
-
-    drawSnake() {
         // draw parts that are going to be removed
         this.removed.toReversed().forEach((part) => part.show());
 
@@ -344,6 +325,7 @@ class Bodypart {
             this.currentSize = BODYSIZE;
         }
         this.removeAnimationTime = 0;
+        this.didLooparound = false;
     }
 
     modifyColor(partColor) {
@@ -403,10 +385,27 @@ class Bodypart {
     }
 
     show() {
+        if (this.didLooparound) {
+            // left border loop
+            this.drawPart(-width, 0);
+
+            // right border loop
+            this.drawPart(width, 0);
+
+            // top border loop
+            this.drawPart(0, -height);
+
+            // top border looping
+            this.drawPart(0, height);
+        }
+        this.drawPart(0, 0);
+    }
+
+    drawPart(offsetX, offsetY) {
         stroke(0);
         fill(this.partColor);
         ellipseMode(CORNER);
-        circle(this.smoothPosition.x, this.smoothPosition.y, this.currentSize);
+        circle(this.smoothPosition.x + offsetX, this.smoothPosition.y + offsetY, this.currentSize);
     }
 }
 
