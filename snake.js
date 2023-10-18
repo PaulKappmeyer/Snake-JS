@@ -69,6 +69,7 @@ function draw() {
     textAlign(LEFT, CENTER);
     text("Länge: " + snake.body.length, 5, 10);
     text("Highscore: " + snake.highscore, 5, 20);
+    text("Speed: " + (MAX_MOVETIME_MS - MOVETIME_MS + MIN_MOVETIME_MS), 5, 30);
 
     if (!running) {
         stroke(0);
@@ -130,8 +131,10 @@ function toggleRunning() {
 }
 
 // ------------------------------------------------------------------- snake
-const MOVETIME_MS = 150;
-const MOVE_ANIMATION_TIME_MS = MOVETIME_MS;
+const MAX_MOVETIME_MS = 300;
+const MIN_MOVETIME_MS = 30;
+let MOVETIME_MS = 150;
+let MOVE_ANIMATION_TIME_MS = MOVETIME_MS;
 const REMOVE_ANIMATION_TIME_MS = 250;
 
 class Snake {
@@ -273,7 +276,16 @@ class Snake {
     }
 
     setMoveDirection(desiredDirection) {
+        // slow down
         if (isOppositeDirection(this.direction, desiredDirection)) {
+            MOVETIME_MS = constrain(MOVETIME_MS + 10, MIN_MOVETIME_MS, MAX_MOVETIME_MS)
+            MOVE_ANIMATION_TIME_MS = MOVETIME_MS;
+            return;
+        }
+        // speed up
+        if (this.direction == desiredDirection) {
+            MOVETIME_MS = constrain(MOVETIME_MS - 10, MIN_MOVETIME_MS, MAX_MOVETIME_MS)
+            MOVE_ANIMATION_TIME_MS = MOVETIME_MS;
             return;
         }
         this.desiredDirection = desiredDirection;
