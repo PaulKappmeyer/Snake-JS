@@ -114,6 +114,7 @@ function keyPressed() {
             toggleRunning();
             break;
     }
+    return false;
 }
 
 function mouseClicked() {
