@@ -13,7 +13,7 @@ let running = true;
 
 function setup() {
     calcBODYSIZE();
-    let canvas = createCanvas(NUM_COLS * BODYSIZE + 3, NUM_ROWS * BODYSIZE + 3);
+    let canvas = createCanvas(NUM_COLS * BODYSIZE, NUM_ROWS * BODYSIZE);
     canvas.parent(container);
 
     snake = new Snake();
@@ -28,7 +28,7 @@ function windowResized() {
     let OLD_BODYSIZE = BODYSIZE;
     // calc new size
     calcBODYSIZE()
-    resizeCanvas(NUM_COLS * BODYSIZE + 3, NUM_ROWS * BODYSIZE + 3);
+    resizeCanvas(NUM_COLS * BODYSIZE, NUM_ROWS * BODYSIZE);
 
     // pass old size
     foods.forEach((food) => food.onWindowResized());
@@ -54,7 +54,6 @@ function draw() {
 
     // draw: background
     background(220);
-    translate(1, 1);
 
     // draw: food
     foods.forEach((food) => food.show());
@@ -268,11 +267,35 @@ class Snake {
         this.body.toReversed().forEach((part) => part.show());
 
         // draw head: eyes
+        this.drawEyes();
+    }
+
+    drawEyes() {
         fill(255, 255, 255, 200);
         let headX = this.head.smoothPosition.x;
         let headY = this.head.smoothPosition.y;
-        circle(headX + 5 / 24 * BODYSIZE, headY + BODYSIZE / 4, BODYSIZE / 4);
-        circle(headX + 13 / 24 * BODYSIZE, headY + BODYSIZE / 4, BODYSIZE / 4);
+        let eyeSize = BODYSIZE / 4;
+        let eyeX1 = headX + 5 / 24 * BODYSIZE;
+        let eyeX2 = headX + 13 / 24 * BODYSIZE;
+        let eyeY = headY + eyeSize;
+
+        circle(eyeX1, eyeY, eyeSize);
+        circle(eyeX2, eyeY, eyeSize);
+
+        if (this.head.didLooparound) {
+            print("lol");
+            circle(eyeX1 + width, eyeY, eyeSize);
+            circle(eyeX2 + width, eyeY, eyeSize);
+
+            circle(eyeX1 - width, eyeY, eyeSize);
+            circle(eyeX2 - width, eyeY, eyeSize);
+
+            circle(eyeX1, eyeY + height, eyeSize);
+            circle(eyeX2, eyeY + height, eyeSize);
+
+            circle(eyeX1, eyeY - height, eyeSize);
+            circle(eyeX2, eyeY - height, eyeSize);
+        }
     }
 
     setMoveDirection(desiredDirection) {
