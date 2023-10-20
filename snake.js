@@ -67,12 +67,25 @@ function draw() {
     textSize(12);
     textAlign(LEFT, CENTER);
     text("Länge: " + snake.body.length, 5, 10);
-    text("Highscore: " + snake.highscore, 5, 20);
-    text("Speed: " + int(25000 / MOVETIME_MS), 5, 30);
-    text("Boost: ", 5, 45);
+    text("Highscore: " + snake.highscore, 5, 25);
+    text("Speed: ", 5, 40);
+    text("Boost: ", 5, 55);
+
+    // draw: speed HUD
+    stroke(0);
+    noFill()
+    rect(50, 35, 70, 10);
+
+    fill(100, 0, 0, 150);
+    rect(50, 35, 3000/MOVETIME_MS, 10);
 
     // draw: boost HUD
-    drawBoostHud();
+    stroke(0);
+    noFill()
+    rect(50, 50, 70, 10);
+
+    fill(0, 100, 0, 150);
+    rect(50, 50, (snake.currentBoostCapacity / MAX_BOOST) * 70, 10);
 
     // draw: pause overlay
     if (!running) {
@@ -84,15 +97,6 @@ function draw() {
         textAlign(CENTER, CENTER);
         text("PAUSED", width / 2, height / 2);
     }
-}
-
-function drawBoostHud() {
-    stroke(0);
-    noFill()
-    rect(50, 40, 70, 10);
-
-    fill(0, 0, 0, 150);
-    rect(50, 40, (snake.currentBoostCapacity / MAX_BOOST) * 70, 10);
 }
 
 // ------------------------------------------------------------------- input
