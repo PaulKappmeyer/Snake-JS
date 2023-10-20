@@ -68,8 +68,13 @@ function draw() {
     textAlign(LEFT, CENTER);
     text("Länge: " + snake.body.length, 5, 10);
     text("Highscore: " + snake.highscore, 5, 20);
-    text("Speed: " + (MAX_MOVETIME_MS - MOVETIME_MS + MIN_MOVETIME_MS), 5, 30);
+    text("Speed: " + int(25000 / MOVETIME_MS), 5, 30);
+    text("Boost: ", 5, 45);
 
+    // draw: boost HUD
+    drawBoostHud();
+
+    // draw: pause overlay
     if (!running) {
         stroke(0);
         fill(0, 0, 0, 100);
@@ -79,6 +84,15 @@ function draw() {
         textAlign(CENTER, CENTER);
         text("PAUSED", width / 2, height / 2);
     }
+}
+
+function drawBoostHud() {
+    stroke(0);
+    noFill()
+    rect(50, 40, 70, 10);
+
+    fill(0, 0, 0, 150);
+    rect(50, 40, (snake.currentBoostCapacity / MAX_BOOST) * 70, 10);
 }
 
 // ------------------------------------------------------------------- input
@@ -130,11 +144,13 @@ function toggleRunning() {
 }
 
 // ------------------------------------------------------------------- snake
-const MAX_MOVETIME_MS = 300;
-const MIN_MOVETIME_MS = 30;
-let MOVETIME_MS = 150;
+const MAX_MOVETIME_MS = 140;
+const MIN_MOVETIME_MS = 40;
+let MOVETIME_MS = MAX_MOVETIME_MS;
 let MOVE_ANIMATION_TIME_MS = MOVETIME_MS;
 const REMOVE_ANIMATION_TIME_MS = 250;
+const SPEED_DECAY = 0.05;
+const MAX_BOOST = 100;
 
 class Snake {
     constructor() {
@@ -150,9 +166,18 @@ class Snake {
         this.timeSinceLastMove = 0;
         this.removed = [];
         this.highscore = initalLength;
+
+        this.currentBoostCapacity = MAX_BOOST;
     }
 
     update() {
+        // update: refill boost capacity
+        this.currentBoostCapacity = constrain(this.currentBoostCapacity + SPEED_DECAY * deltaTime, 0, MAX_BOOST);
+
+        // update: snake speed decay
+        MOVETIME_MS = constrain(MOVETIME_MS + SPEED_DECAY * deltaTime, MIN_MOVETIME_MS, MAX_MOVETIME_MS)
+        MOVE_ANIMATION_TIME_MS = MOVETIME_MS;
+
         // update: remove animation
         this.removed.forEach((part) => part.updateRemoveAnimation());
         this.removed = this.removed.filter((part) => alpha(part.partColor) > 0);
@@ -283,7 +308,6 @@ class Snake {
         circle(eyeX2, eyeY, eyeSize);
 
         if (this.head.didLooparound) {
-            print("lol");
             circle(eyeX1 + width, eyeY, eyeSize);
             circle(eyeX2 + width, eyeY, eyeSize);
 
@@ -299,19 +323,21 @@ class Snake {
     }
 
     setMoveDirection(desiredDirection) {
-        // slow down
         if (isOppositeDirection(this.direction, desiredDirection)) {
-            MOVETIME_MS = constrain(MOVETIME_MS + 10, MIN_MOVETIME_MS, MAX_MOVETIME_MS)
-            MOVE_ANIMATION_TIME_MS = MOVETIME_MS;
             return;
         }
         // speed up
         if (this.direction == desiredDirection) {
-            MOVETIME_MS = constrain(MOVETIME_MS - 10, MIN_MOVETIME_MS, MAX_MOVETIME_MS)
-            MOVE_ANIMATION_TIME_MS = MOVETIME_MS;
+            this.boostSpeed()
             return;
         }
         this.desiredDirection = desiredDirection;
+    }
+
+    boostSpeed() {
+        this.currentBoostCapacity /= 2;
+        MOVETIME_MS -= this.currentBoostCapacity;
+        MOVE_ANIMATION_TIME_MS = MOVETIME_MS;
     }
 }
 
