@@ -77,7 +77,7 @@ function draw() {
     rect(50, 35, 70, 10);
 
     fill(100, 0, 0, 150);
-    rect(50, 35, 3000/MOVETIME_MS, 10);
+    rect(50, 35, 3000/snake.movetime_ms, 10);
 
     // draw: boost HUD
     stroke(0);
@@ -150,8 +150,6 @@ function toggleRunning() {
 // ------------------------------------------------------------------- snake
 const MAX_MOVETIME_MS = 140;
 const MIN_MOVETIME_MS = 40;
-let MOVETIME_MS = MAX_MOVETIME_MS;
-let MOVE_ANIMATION_TIME_MS = MOVETIME_MS;
 const REMOVE_ANIMATION_TIME_MS = 250;
 const SPEED_DECAY = 0.05;
 const MAX_BOOST = 100;
@@ -172,6 +170,8 @@ class Snake {
         this.highscore = initalLength;
 
         this.currentBoostCapacity = MAX_BOOST;
+        this.movetime_ms = MAX_MOVETIME_MS;
+        this.move_animation_time_ms = MAX_MOVETIME_MS;
     }
 
     update() {
@@ -179,8 +179,8 @@ class Snake {
         this.currentBoostCapacity = constrain(this.currentBoostCapacity + SPEED_DECAY * deltaTime, 0, MAX_BOOST);
 
         // update: snake speed decay
-        MOVETIME_MS = constrain(MOVETIME_MS + SPEED_DECAY * deltaTime, MIN_MOVETIME_MS, MAX_MOVETIME_MS)
-        MOVE_ANIMATION_TIME_MS = MOVETIME_MS;
+        this.movetime_ms = constrain(this.movetime_ms + SPEED_DECAY * deltaTime, MIN_MOVETIME_MS, MAX_MOVETIME_MS)
+        this.move_animation_time_ms = this.movetime_ms;
 
         // update: remove animation
         this.removed.forEach((part) => part.updateRemoveAnimation());
@@ -190,7 +190,7 @@ class Snake {
         this.body.forEach((part) => part.updateSpawnAnimation());
 
         // update: move animation
-        let lerpAmount = this.timeSinceLastMove / MOVE_ANIMATION_TIME_MS;
+        let lerpAmount = this.timeSinceLastMove / this.move_animation_time_ms;
         lerpAmount = constrain(lerpAmount, 0, 1);
         this.body.forEach((part) => part.updateMoveAnimation(lerpAmount));
 
@@ -198,10 +198,10 @@ class Snake {
 
         // update: move timer
         this.timeSinceLastMove += deltaTime;
-        if (this.timeSinceLastMove < MOVETIME_MS) {
+        if (this.timeSinceLastMove < this.movetime_ms) {
             return;
         }
-        this.timeSinceLastMove -= MOVETIME_MS;
+        this.timeSinceLastMove -= this.movetime_ms;
 
         // update tail: grid positions
         for (let i = this.body.length - 1; i >= 1; i--) {
@@ -340,8 +340,8 @@ class Snake {
 
     boostSpeed() {
         this.currentBoostCapacity /= 2;
-        MOVETIME_MS -= this.currentBoostCapacity;
-        MOVE_ANIMATION_TIME_MS = MOVETIME_MS;
+        this.movetime_ms -= this.currentBoostCapacity;
+        this.move_animation_time_ms = this.movetime_ms;
     }
 }
 
