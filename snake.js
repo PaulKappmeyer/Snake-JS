@@ -77,7 +77,7 @@ function draw() {
     rect(50, 35, 70, 10);
 
     fill(100, 0, 0, 150);
-    rect(50, 35, 3000/snake.movetime_ms, 10);
+    rect(50, 35, 3000 / snake.movetime_ms, 10);
 
     // draw: boost HUD
     stroke(0);
@@ -151,19 +151,18 @@ function toggleRunning() {
 const MAX_MOVETIME_MS = 140;
 const MIN_MOVETIME_MS = 40;
 const REMOVE_ANIMATION_TIME_MS = 250;
-const SPEED_DECAY = 0.05;
+const SPEED_DECAY = 0.125;
 const MAX_BOOST = 100;
 
 class Snake {
     constructor() {
-        this.head = new Bodypart(0, 0, color(25, 255, 80));
+        this.head = new Bodypart(createVector(0, 0), createVector(1, 0), color(25, 255, 80));
         this.direction = "WEST";
         this.desiredDirection = "WEST";
-        this.head.targetPosition.add(1, 0);
         this.body = [this.head];
         let initalLength = 5;
         for (let i = 0; i < initalLength - 1; i++) {
-            this.body.push(new Bodypart(this.body.at(-1)));
+            this.body.push(Bodypart.fromOther(this.body.at(-1)));
         }
         this.timeSinceLastMove = 0;
         this.removed = [];
@@ -172,6 +171,7 @@ class Snake {
         this.currentBoostCapacity = MAX_BOOST;
         this.movetime_ms = MAX_MOVETIME_MS;
         this.move_animation_time_ms = MAX_MOVETIME_MS;
+        this.moveLerpAmount = 0;
     }
 
     update() {
@@ -182,18 +182,12 @@ class Snake {
         this.movetime_ms = constrain(this.movetime_ms + SPEED_DECAY * deltaTime, MIN_MOVETIME_MS, MAX_MOVETIME_MS)
         this.move_animation_time_ms = this.movetime_ms;
 
-        // update: remove animation
-        this.removed.forEach((part) => part.updateRemoveAnimation());
+        // update: animations
+        this.removed.forEach((part) => part.updateAnimations());
         this.removed = this.removed.filter((part) => alpha(part.partColor) > 0);
 
-        // update: spawn animation:
-        this.body.forEach((part) => part.updateSpawnAnimation());
-
-        // update: move animation
-        let lerpAmount = this.timeSinceLastMove / this.move_animation_time_ms;
-        lerpAmount = constrain(lerpAmount, 0, 1);
-        this.body.forEach((part) => part.updateMoveAnimation(lerpAmount));
-
+        this.moveLerpAmount = constrain(this.timeSinceLastMove / this.move_animation_time_ms, 0, 1);
+        this.body.forEach((part) => part.updateAnimations());
 
 
         // update: move timer
@@ -222,14 +216,16 @@ class Snake {
             }
         }
         if (collisionIndex != -1) {
-            this.body.splice(collisionIndex).forEach((part) => this.removed.push(part));
+            this.head.startEatAnimation();
+            this.body.splice(collisionIndex).forEach((part) => this.removed.push(part.startRemoveAnimation()));
         }
 
         // check collision with food
         for (let i = 0; i < foods.length; i++) {
             let food = foods[i];
             if (this.head.currentPosition.equals(food.currentPosition)) {
-                this.body.push(new Bodypart(this.body.at(-1)));
+                this.head.startEatAnimation();
+                this.body.push(Bodypart.fromOther(this.body.at(-1)));
                 if (this.body.length > this.highscore) {
                     this.highscore = this.body.length;
                 }
@@ -303,9 +299,9 @@ class Snake {
         fill(255, 255, 255, 200);
         let headX = this.head.smoothPosition.x;
         let headY = this.head.smoothPosition.y;
-        let eyeSize = BODYSIZE / 4;
-        let eyeX1 = headX + 5 / 24 * BODYSIZE;
-        let eyeX2 = headX + 13 / 24 * BODYSIZE;
+        let eyeSize = this.head.currentSize / 4;
+        let eyeX1 = headX + 5 / 24 * this.head.currentSize;
+        let eyeX2 = headX + 13 / 24 * this.head.currentSize;
         let eyeY = headY + eyeSize;
 
         circle(eyeX1, eyeY, eyeSize);
@@ -368,32 +364,37 @@ const MAX_B_CHANGE = 45;
 const BODYPART_SPAWN_TIME_MS = 250;
 
 class Bodypart {
-    constructor(x, y, partColor) {
-        if (y === undefined) {
-            let other = x;
-            this.currentPosition = other.currentPosition.copy();
-            this.targetPosition = other.currentPosition.copy();
-            this.smoothPosition = other.currentPosition.copy().mult(BODYSIZE);
-            this.partColor = this.modifyColor(other.partColor);
-
-            this.inSpawnAnimation = true;
-            this.spawnAnimationTime = 0;
-            this.currentSize = 0;
-        } else {
-            this.currentPosition = createVector(x, y);
-            this.targetPosition = createVector(x, y);
-            this.smoothPosition = createVector(x, y).mult(BODYSIZE);
-            this.partColor = partColor;
-
-            this.inSpawnAnimation = false;
-            this.spawnAnimationTime = 0;
-            this.currentSize = BODYSIZE;
-        }
-        this.removeAnimationTime = 0;
+    constructor(currentPosition, targetPosition, partColor) {
+        this.currentPosition = currentPosition;
+        this.targetPosition = targetPosition;
+        this.smoothPosition = p5.Vector.mult(this.currentPosition, BODYSIZE);
+        this.partColor = partColor;
+        this.currentSize = BODYSIZE;
         this.didLooparound = false;
+
+        this.inSpawnAnimation = false;
+        this.spawnAnimationTime = 0;
+
+        this.inEatAnimation = false;
+        this.eatAnimationTime = 0;
+
+        this.inRemoveAnimation = false;
+        this.removeAnimationTime = 0;
     }
 
-    modifyColor(partColor) {
+    static fromXY(x, y, partColor) {
+        let part = new Bodypart(createVector(x, y), createVector(x, y), partColor);
+        return part;
+    }
+
+    static fromOther(other) {
+        let part = new Bodypart(other.currentPosition.copy(), other.currentPosition.copy(), Bodypart.modifyColor(other.partColor));
+        other.behind = part;
+        part.startSpawnAnimation();
+        return part;
+    }
+
+    static modifyColor(partColor) {
         let r = red(partColor);
         let g = green(partColor);
         let b = blue(partColor);
@@ -419,34 +420,95 @@ class Bodypart {
         }
     }
 
-    updateSpawnAnimation() {
-        if (this.inSpawnAnimation == false) {
+    updateAnimations() {
+        if (this.inRemoveAnimation) {
+            this.updateRemoveAnimation();
             return;
         }
+
+        this.updateMoveAnimation();
+
+        if (this.inSpawnAnimation) {
+            this.updateSpawnAnimation();
+            return;
+        }
+
+        if (this.inEatAnimation) {
+            this.updateEatAnimation();
+        }
+    }
+
+    // ----------------- eat animation
+    startEatAnimation() {
+        if (this.inEatAnimation) {
+            return;
+        }
+        this.inEatAnimation = true;
+        this.eatAnimationTime = 0;
+    }
+
+    updateEatAnimation() {
+        this.eatAnimationTime += deltaTime;
+        if (this.eatAnimationTime >= BODYPART_SPAWN_TIME_MS) {
+            this.inEatAnimation = false;
+            this.currentSize = BODYSIZE;
+            return;
+        }
+        // pass animation 
+        if (this.behind !== undefined && this.eatAnimationTime > BODYPART_SPAWN_TIME_MS / 7) {
+            this.behind.startEatAnimation();
+        }
+
+        // update size
+        this.currentSize = BODYSIZE + sin(PI * this.eatAnimationTime / BODYPART_SPAWN_TIME_MS) * 15;
+
+        // update position
+        let offset = (BODYSIZE - this.currentSize) / 2;
+        this.smoothPosition.add(offset, offset);
+    }
+
+    // ----------------- spawn animation
+    startSpawnAnimation() {
+        this.inSpawnAnimation = true;
+        this.spawnAnimationTime = 0;
+        this.currentSize = 0;
+    }
+
+    updateSpawnAnimation() {
         this.spawnAnimationTime += deltaTime;
+        // end animation?
         if (this.spawnAnimationTime >= BODYPART_SPAWN_TIME_MS) {
-            this.smoothPosition.set(this.currentPosition.x * BODYSIZE, this.currentPosition.y * BODYSIZE);
             this.currentSize = BODYSIZE;
             this.inSpawnAnimation = false;
             return;
         }
+        // update size
         this.currentSize = lerp(0, BODYSIZE, this.spawnAnimationTime / BODYPART_SPAWN_TIME_MS);
+
+        // update position
+        let offset = (BODYSIZE - this.currentSize) / 2;
+        this.smoothPosition.add(offset, offset);
     }
 
+    // ----------------- remove animation
+    startRemoveAnimation() {
+        this.inRemoveAnimation = true;
+        this.removeAnimationTime = 0;
+        return this;
+    }
+
+    // ----------------- move animation
     updateRemoveAnimation() {
+        // update alpha value of color
         this.removeAnimationTime += deltaTime;
         let newAlpha = constrain(255 * (1 - this.removeAnimationTime / REMOVE_ANIMATION_TIME_MS), 0, 255);
         this.partColor.setAlpha(newAlpha);
     }
 
-    updateMoveAnimation(lerpAmount) {
-        this.smoothPosition = p5.Vector.lerp(this.currentPosition, this.targetPosition, lerpAmount);
+    updateMoveAnimation() {
+        // update position
+        this.smoothPosition = p5.Vector.lerp(this.currentPosition, this.targetPosition, snake.moveLerpAmount);
         this.smoothPosition.mult(BODYSIZE);
-
-        if (this.inSpawnAnimation) {
-            let offset = (BODYSIZE - this.currentSize) / 2;
-            this.smoothPosition.add(offset, offset);
-        }
     }
 
     show() {
