@@ -31,12 +31,14 @@ function windowResized() {
     resizeCanvas(NUM_COLS * BODYSIZE, NUM_ROWS * BODYSIZE);
 
     // pass old size
-    foods.forEach((food) => food.onWindowResized());
+    for (const food of foods) {
+        food.onWindowResized()
+    }
     snake.onWindowResized(OLD_BODYSIZE);
 }
 
 function calcBODYSIZE() {
-    BODYSIZE = int(min((windowWidth - 100) / NUM_COLS, (windowHeight - 100) / NUM_ROWS));
+    BODYSIZE = Math.floor(Math.min((windowWidth - 100) / NUM_COLS, (windowHeight - 100) / NUM_ROWS));
 }
 
 function draw() {
@@ -49,14 +51,18 @@ function draw() {
         snake.update();
 
         // update: food animation
-        foods.forEach((food) => food.updateSpawnAnimation());
+        for (const food of foods) {
+            food.updateSpawnAnimation();
+        }
     }
 
     // draw: background
     background(220);
 
     // draw: food
-    foods.forEach((food) => food.show());
+    for (const food of foods) {
+        food.show();
+    }
 
     // draw: snake
     snake.show();
@@ -70,6 +76,8 @@ function draw() {
     text("Highscore: " + snake.highscore, 5, 25);
     text("Speed: ", 5, 40);
     text("Boost: ", 5, 55);
+    text("fps: " + Math.round(frameRate()), 5, 70);
+    text("deltatime: " + Math.round(deltaTime), 5, 85);
 
     // draw: speed HUD
     stroke(0);
@@ -183,11 +191,15 @@ class Snake {
         this.move_animation_time_ms = this.movetime_ms;
 
         // update: animations
-        this.removed.forEach((part) => part.updateAnimations());
+        for (const part of this.removed) {
+            part.updateAnimations();
+        }
         this.removed = this.removed.filter((part) => alpha(part.partColor) > 0);
 
         this.moveLerpAmount = constrain(this.timeSinceLastMove / this.move_animation_time_ms, 0, 1);
-        this.body.forEach((part) => part.updateAnimations());
+        for (const part of this.body) {
+            part.updateAnimations()
+        }
 
 
         // update: move timer
@@ -217,7 +229,10 @@ class Snake {
         }
         if (collisionIndex != -1) {
             this.head.startEatAnimation();
-            this.body.splice(collisionIndex).forEach((part) => this.removed.push(part.startRemoveAnimation()));
+            for (const part of this.body.splice(collisionIndex)) {
+                part.startRemoveAnimation()
+                this.removed.push(part);
+            }
         }
 
         // check collision with food
@@ -280,16 +295,24 @@ class Snake {
     }
 
     onWindowResized(OLD_BODYSIZE) {
-        this.removed.forEach((part) => part.onWindowResized(OLD_BODYSIZE));
-        this.body.forEach((part) => part.onWindowResized(OLD_BODYSIZE));
+        for (const part of this.removed) {
+            part.onWindowResized(OLD_BODYSIZE);
+        }
+        for (const part of this.body) {
+            part.onWindowResized(OLD_BODYSIZE);
+        }
     }
 
     show() {
         // draw parts that are going to be removed
-        this.removed.toReversed().forEach((part) => part.show());
+        for (let i = this.removed.length - 1; i >= 0; i--) {
+            this.removed[i].show();
+        }
 
         // draw body
-        this.body.toReversed().forEach((part) => part.show());
+        for (let i = this.body.length - 1; i >= 0; i--) {
+            this.body[i].show();
+        }
 
         // draw head: eyes
         this.drawEyes();
@@ -398,12 +421,12 @@ class Bodypart {
         let r = red(partColor);
         let g = green(partColor);
         let b = blue(partColor);
-        let rChangeBound = random(15, MAX_R_CHANGE);
-        let gChangeBound = random(15, MAX_G_CHANGE);
-        let bChangeBound = random(15, MAX_B_CHANGE);
-        let newR = constrain(r + random(-rChangeBound, rChangeBound), 0, 255);
-        let newG = constrain(g + random(-gChangeBound, gChangeBound), 0, 255);
-        let newB = constrain(b + random(-bChangeBound, bChangeBound), 0, 255)
+        let rChangeBound = getRandomArbitrary(15, MAX_R_CHANGE);
+        let gChangeBound = getRandomArbitrary(15, MAX_G_CHANGE);
+        let bChangeBound = getRandomArbitrary(15, MAX_B_CHANGE);
+        let newR = constrain(r + getRandomArbitrary(-rChangeBound, rChangeBound), 0, 255);
+        let newG = constrain(g + getRandomArbitrary(-gChangeBound, gChangeBound), 0, 255);
+        let newB = constrain(b + getRandomArbitrary(-bChangeBound, bChangeBound), 0, 255)
         return color(newR, newG, newB);
     }
 
@@ -460,7 +483,7 @@ class Bodypart {
         }
 
         // update size
-        this.currentSize = BODYSIZE + sin(PI * this.eatAnimationTime / BODYPART_SPAWN_TIME_MS) * 15;
+        this.currentSize = BODYSIZE + Math.sin(PI * this.eatAnimationTime / BODYPART_SPAWN_TIME_MS) * 15;
 
         // update position
         let offset = (BODYSIZE - this.currentSize) / 2;
@@ -494,7 +517,6 @@ class Bodypart {
     startRemoveAnimation() {
         this.inRemoveAnimation = true;
         this.removeAnimationTime = 0;
-        return this;
     }
 
     // ----------------- move animation
@@ -536,6 +558,16 @@ class Bodypart {
     }
 }
 
+// ------------------------------------------------------------------- java script
+
+function getRandomInt(max) {
+    return Math.floor(Math.random() * max);
+}
+
+function getRandomArbitrary(min, max) {
+    return Math.random() * (max - min) + min;
+}
+
 // ------------------------------------------------------------------- food
 const FOOD_SPAWN_TIME_MS = 300;
 
@@ -550,7 +582,7 @@ class Food {
 
     randomLocation() {
         do {
-            this.currentPosition.set(int(random(0, NUM_COLS)), int(random(0, NUM_ROWS)));
+            this.currentPosition.set(getRandomInt(NUM_COLS), getRandomInt(NUM_ROWS));
             const samePosition = (element) => element.currentPosition.equals(this.currentPosition) && element != this;
 
             if (foods.some(samePosition)) {
