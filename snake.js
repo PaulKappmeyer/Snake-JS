@@ -2,25 +2,48 @@ const NUM_COLS = 33;
 const NUM_ROWS = 17;
 
 let BODYSIZE;
-
 const NUM_FOOD = 8;
+
+let canvas;
 let snake;
 let foods = [];
 
 const container = "snake-container";
+let conatinerDiv;
 
 let running = true;
+let darkMode = false;
+const DARK_MODE_BACKGROUND = "#282828";
+const DARK_MODE_TEXT_FILL = "#FFFFFF";
+const LIGHT_MODE_BACKGROUND = "#FFFFFF"; //"#DCDCDC";
+const LIGHT_MODE_TEXT_FILL = "#000000";
 
 function setup() {
     calcBODYSIZE();
-    let canvas = createCanvas(NUM_COLS * BODYSIZE, NUM_ROWS * BODYSIZE);
+    canvas = createCanvas(NUM_COLS * BODYSIZE, NUM_ROWS * BODYSIZE);
     canvas.parent(container);
+    conatinerDiv = select("#" + container);
 
     snake = new Snake();
+
+    darkModeButton = createButton("dark mode");
+    darkModeButton.mousePressed(toggleDarkMode);
+    darkModeButton.parent(container);
+    darkModeButton.position(width + 5, 0);
+    toggleDarkMode();
 
     for (let i = 0; i < NUM_FOOD; i++) {
         foods[i] = new Food();
         foods[i].randomLocation();
+    }
+}
+
+function toggleDarkMode() {
+    darkMode = !darkMode;
+    if (darkMode == true) {
+        conatinerDiv.style('background-color', DARK_MODE_BACKGROUND);
+    } else {
+        conatinerDiv.style('background-color', LIGHT_MODE_BACKGROUND);
     }
 }
 
@@ -35,6 +58,8 @@ function windowResized() {
         food.onWindowResized()
     }
     snake.onWindowResized(OLD_BODYSIZE);
+
+    darkModeButton.position(width + 5, 0);
 }
 
 function calcBODYSIZE() {
@@ -57,7 +82,12 @@ function draw() {
     }
 
     // draw: background
-    background(220);
+    if (darkMode) {
+        background(DARK_MODE_BACKGROUND);
+    } else {
+        background(LIGHT_MODE_BACKGROUND);
+    }
+
 
     // draw: food
     for (const food of foods) {
@@ -68,8 +98,12 @@ function draw() {
     snake.show();
 
     // draw: text
-    stroke(220);
-    fill(0);
+    noStroke()
+    if (darkMode) {
+        fill(DARK_MODE_TEXT_FILL);
+    } else {
+        fill(LIGHT_MODE_TEXT_FILL);
+    }
     textSize(12);
     textAlign(LEFT, CENTER);
     text("Länge: " + snake.body.length, 5, 10);
@@ -97,10 +131,15 @@ function draw() {
 
     // draw: pause overlay
     if (!running) {
-        stroke(0);
+        noStroke();
         fill(0, 0, 0, 100);
         rect(0, 0, width, height);
 
+        if (darkMode) {
+            fill(DARK_MODE_TEXT_FILL);
+        } else {
+            fill(LIGHT_MODE_TEXT_FILL);
+        }
         textSize(100);
         textAlign(CENTER, CENTER);
         text("PAUSED", width / 2, height / 2);
