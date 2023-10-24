@@ -385,6 +385,10 @@ class Snake {
     }
 
     setMoveDirection(desiredDirection) {
+        if (running == false) {
+            toggleRunning();
+        }
+
         if (isOppositeDirection(this.direction, desiredDirection)) {
             return;
         }
