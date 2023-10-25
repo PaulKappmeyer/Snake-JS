@@ -2,7 +2,8 @@ const NUM_COLS = 33;
 const NUM_ROWS = 17;
 
 let BODYSIZE;
-const NUM_FOOD = 8;
+const NUM_FOOD = 13;
+let NUM_FOOD_MISSED = 0;
 
 let canvas;
 let snake;
@@ -42,10 +43,10 @@ function setup() {
 function toggleDarkMode() {
     darkMode = !darkMode;
     if (darkMode == true) {
-        darkModeButton.elt.innerHTML  = "light mode";
+        darkModeButton.elt.innerHTML = "light mode";
         conatinerDiv.style('background-color', DARK_MODE_BACKGROUND);
     } else {
-        darkModeButton.elt.innerHTML  = "dark mode";
+        darkModeButton.elt.innerHTML = "dark mode";
         conatinerDiv.style('background-color', LIGHT_MODE_BACKGROUND);
     }
 }
@@ -78,9 +79,9 @@ function draw() {
         // update: snake movement and animations
         snake.update();
 
-        // update: food animation
+        // update: food respawning and animations
         for (const food of foods) {
-            food.updateSpawnAnimation();
+            food.update();
         }
     }
 
@@ -113,8 +114,11 @@ function draw() {
     text("Highscore: " + snake.highscore, 5, 25);
     text("Speed: ", 5, 40);
     text("Boost: ", 5, 55);
-    text("fps: " + Math.round(frameRate()), 5, 70);
-    text("deltatime: " + Math.round(deltaTime), 5, 85);
+    text("Food missed: " + NUM_FOOD_MISSED, 5, 70);
+
+    // debugging 
+    // text("fps: " + Math.round(frameRate()), width - 75, 10);
+    // text("deltatime: " + Math.round(deltaTime), width - 75, 25);
 
     // draw: speed HUD
     stroke(0);
@@ -281,12 +285,16 @@ class Snake {
         for (let i = 0; i < foods.length; i++) {
             let food = foods[i];
             if (this.head.currentPosition.equals(food.currentPosition)) {
-                this.head.startEatAnimation();
-                this.body.push(Bodypart.fromOther(this.body.at(-1)));
-                if (this.body.length > this.highscore) {
-                    this.highscore = this.body.length;
+                if (food.timeAlive <= food.currentMaxAliveTime * 0.7) {
+                    this.head.startEatAnimation();
+                    this.body.push(Bodypart.fromOther(this.body.at(-1)));
+                    if (this.body.length > this.highscore) {
+                        this.highscore = this.body.length;
+                    }
+
                 }
                 food.randomLocation();
+                break;
             }
         }
 
@@ -616,6 +624,8 @@ function getRandomArbitrary(min, max) {
 
 // ------------------------------------------------------------------- food
 const FOOD_SPAWN_TIME_MS = 300;
+const MIN_FOOD_ALIVE_TIME = 30000
+const MAX_FOOD_ALIVE_TIME = 100000;
 
 class Food {
     constructor() {
@@ -624,6 +634,9 @@ class Food {
         this.inSpawnAnimation = true;
         this.spawnAnimationTime = 0;
         this.currentSize = 0;
+        this.decaying = true;
+        this.timeAlive = 0;
+        this.currentMaxAliveTime = getRandomArbitrary(MIN_FOOD_ALIVE_TIME, MAX_FOOD_ALIVE_TIME);
     }
 
     randomLocation() {
@@ -641,6 +654,8 @@ class Food {
             this.inSpawnAnimation = true;
             this.spawnAnimationTime = 0;
             this.currentSize = 0;
+            this.timeAlive = 0;
+            this.currentMaxAliveTime = getRandomArbitrary(MIN_FOOD_ALIVE_TIME, MAX_FOOD_ALIVE_TIME);
             break;
         } while (true);
     }
@@ -656,10 +671,27 @@ class Food {
         }
     }
 
-    updateSpawnAnimation() {
-        if (this.inSpawnAnimation == false) {
-            return;
+    update() {
+        if (this.inSpawnAnimation == true) {
+            this.updateSpawnAnimation();;
         }
+        else if (this.decaying) {
+            this.timeAlive += deltaTime;
+            this.updateDecayAnimation();
+            if (this.timeAlive > this.currentMaxAliveTime) {
+                this.randomLocation();
+                NUM_FOOD_MISSED++;
+            }
+        }
+    }
+
+    updateDecayAnimation() {
+        this.currentSize = lerp(BODYSIZE, 0, this.timeAlive / this.currentMaxAliveTime);
+        let offset = (BODYSIZE - this.currentSize) / 2;
+        this.currentDrawPosition.set(this.currentPosition.x * BODYSIZE + offset, this.currentPosition.y * BODYSIZE + offset);
+    }
+
+    updateSpawnAnimation() {
         this.spawnAnimationTime += deltaTime;
         if (this.spawnAnimationTime >= FOOD_SPAWN_TIME_MS) {
             this.currentDrawPosition.set(this.currentPosition.x * BODYSIZE, this.currentPosition.y * BODYSIZE);
