@@ -13,6 +13,7 @@ let conatinerDiv;
 
 let running = true;
 let darkMode = false;
+let darkModeButton;
 const DARK_MODE_BACKGROUND = "#282828";
 const DARK_MODE_TEXT_FILL = "#FFFFFF";
 const LIGHT_MODE_BACKGROUND = "#FFFFFF"; //"#DCDCDC";
@@ -26,7 +27,7 @@ function setup() {
 
     snake = new Snake();
 
-    darkModeButton = createButton("dark mode");
+    darkModeButton = createButton("light mode");
     darkModeButton.mousePressed(toggleDarkMode);
     darkModeButton.parent(container);
     darkModeButton.position(width + 5, 0);
@@ -41,8 +42,10 @@ function setup() {
 function toggleDarkMode() {
     darkMode = !darkMode;
     if (darkMode == true) {
+        darkModeButton.elt.innerHTML  = "light mode";
         conatinerDiv.style('background-color', DARK_MODE_BACKGROUND);
     } else {
+        darkModeButton.elt.innerHTML  = "dark mode";
         conatinerDiv.style('background-color', LIGHT_MODE_BACKGROUND);
     }
 }
