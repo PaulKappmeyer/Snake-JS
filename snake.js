@@ -40,7 +40,7 @@ function setup() {
 
     for (let i = 0; i < NUM_FOOD; i++) {
         foods[i] = new Food();
-        foods[i].randomLocation();
+        foods[i].init();
     }
 }
 
@@ -93,9 +93,7 @@ function draw() {
 
     // draw: background
     if (darkMode) {
-        //background(DARK_MODE_BACKGROUND);
-        fill(DARK_MODE_BACKGROUND);
-        rect(0, 0, width, height);
+        background(DARK_MODE_BACKGROUND);
     } else {
         background(LIGHT_MODE_BACKGROUND);
     }
@@ -162,6 +160,7 @@ function draw() {
 
     // draw: pause overlay
     if (!running) {
+        rectMode(CORNER);
         noStroke();
         fill(0, 0, 0, 100);
         rect(0, 0, width, height);
@@ -235,7 +234,6 @@ const MIN_MOVETIME_MS = 40;
 const REMOVE_ANIMATION_TIME_MS = 250;
 const SPEED_DECAY = 0.125;
 const MAX_BOOST = 100;
-const SNAKE_BLIND_PROBABILITY = 0.5;
 const SNAKE_BLIND_TIME = 7500;
 
 class Snake {
@@ -327,23 +325,8 @@ class Snake {
         for (let i = 0; i < foods.length; i++) {
             let food = foods[i];
             if (this.head.currentPosition.equals(food.currentPosition)) {
-                if (food.timeAlive <= food.currentMaxAliveTime * 0.7) {
-                    this.head.startEatAnimation();
-
-                    if (food.isMystery) {
-                        if (Math.random() < SNAKE_BLIND_PROBABILITY) {
-                            this.blinded = true;
-                            this.blindTime = 0;
-                        } else {
-                            for (let i = 0; i < getRandomArbitrary(3, 10); i++) {
-                                this.addPart();
-                            }
-                        }
-                    }
-                    this.addPart();
-                }
-                food.randomLocation();
-                break;
+                this.head.startEatAnimation();
+                food.onEat();
             }
         }
 
@@ -393,11 +376,25 @@ class Snake {
         }
     }
 
+    startBlind() {
+        this.blinded = true;
+        this.blindTime = 0;
+    }
+
     addPart() {
         this.body.push(Bodypart.fromOther(this.body.at(-1)));
         if (this.body.length > this.highscore) {
             this.highscore = this.body.length;
         }
+    }
+
+    removePart() {
+        if (this.body.length <= 1) {
+            return;
+        }
+        let part = this.body.pop();
+        part.startRemoveAnimation()
+        this.removed.push(part);
     }
 
     onWindowResized(OLD_BODYSIZE) {
@@ -429,9 +426,10 @@ class Snake {
         let headX = this.head.smoothPosition.x;
         let headY = this.head.smoothPosition.y;
         let eyeSize = this.head.currentSize / 4;
-        let eyeX1 = headX + 5 / 24 * this.head.currentSize;
-        let eyeX2 = headX + 13 / 24 * this.head.currentSize;
-        let eyeY = headY + eyeSize;
+        let offset = 2 * eyeSize / 3;
+        let eyeX1 = headX - offset;
+        let eyeX2 = headX + offset;
+        let eyeY = headY - offset;
 
         circle(eyeX1, eyeY, eyeSize);
         circle(eyeX2, eyeY, eyeSize);
@@ -500,7 +498,7 @@ class Bodypart {
     constructor(currentPosition, targetPosition, partColor) {
         this.currentPosition = currentPosition;
         this.targetPosition = targetPosition;
-        this.smoothPosition = p5.Vector.mult(this.currentPosition, BODYSIZE);
+        this.smoothPosition = p5.Vector.mult(this.currentPosition, BODYSIZE).add(BODYSIZE / 2, BODYSIZE / 2);
         this.partColor = partColor;
         this.currentSize = BODYSIZE;
         this.didLooparound = false;
@@ -594,10 +592,6 @@ class Bodypart {
 
         // update size
         this.currentSize = BODYSIZE + Math.sin(PI * this.eatAnimationTime / BODYPART_SPAWN_TIME_MS) * 15;
-
-        // update position
-        let offset = (BODYSIZE - this.currentSize) / 2;
-        this.smoothPosition.add(offset, offset);
     }
 
     // ----------------- spawn animation
@@ -617,10 +611,6 @@ class Bodypart {
         }
         // update size
         this.currentSize = lerp(0, BODYSIZE, this.spawnAnimationTime / BODYPART_SPAWN_TIME_MS);
-
-        // update position
-        let offset = (BODYSIZE - this.currentSize) / 2;
-        this.smoothPosition.add(offset, offset);
     }
 
     // ----------------- remove animation
@@ -640,10 +630,14 @@ class Bodypart {
     updateMoveAnimation() {
         // update position
         this.smoothPosition = p5.Vector.lerp(this.currentPosition, this.targetPosition, snake.moveLerpAmount);
-        this.smoothPosition.mult(BODYSIZE);
+        this.smoothPosition.mult(BODYSIZE).add(BODYSIZE / 2, BODYSIZE / 2);
     }
 
     show() {
+        stroke(0);
+        fill(this.partColor);
+        ellipseMode(CENTER);
+
         if (this.didLooparound) {
             // left border loop
             this.drawPart(-width, 0);
@@ -661,9 +655,6 @@ class Bodypart {
     }
 
     drawPart(offsetX, offsetY) {
-        stroke(0);
-        fill(this.partColor);
-        ellipseMode(CORNER);
         circle(this.smoothPosition.x + offsetX, this.smoothPosition.y + offsetY, this.currentSize);
     }
 }
@@ -684,7 +675,7 @@ const MIN_FOOD_ALIVE_TIME = 30000
 const MAX_FOOD_ALIVE_TIME = 100000;
 const STANDARD_FOOD_COLOR = "#ff0000";
 const MYSTERY_FOOD_COLOR = "#f0e800";
-const MYSTERY_PROBABILITY = 0.075;
+const MYSTERY_PROBABILITY = 0.085;
 
 class Food {
     constructor() {
@@ -701,7 +692,7 @@ class Food {
         this.isMystery = false;
     }
 
-    randomLocation() {
+    init() {
         do {
             this.currentPosition.set(getRandomInt(NUM_COLS), getRandomInt(NUM_ROWS));
             const samePosition = (element) => element.currentPosition.equals(this.currentPosition) && element != this;
@@ -713,6 +704,7 @@ class Food {
                 continue;
             }
 
+            this.currentDrawPosition.set(this.currentPosition).mult(BODYSIZE).add(BODYSIZE / 2, BODYSIZE / 2);
             this.inSpawnAnimation = true;
             this.spawnAnimationTime = 0;
             this.currentSize = 0;
@@ -722,7 +714,7 @@ class Food {
             this.isMystery = (Math.random() <= MYSTERY_PROBABILITY);
             if (this.isMystery) {
                 this.currentColor = MYSTERY_FOOD_COLOR;
-                this.decaying = true;
+                // this.decaying = true;
             } else {
                 this.currentColor = STANDARD_FOOD_COLOR;
                 this.decaying = false;
@@ -731,52 +723,66 @@ class Food {
         } while (true);
     }
 
+    onEat() {
+        if (this.isMystery) {
+            let rand = Math.random()
+            if (0.0 <= rand && rand < 0.4) {
+                snake.startBlind();
+            } else if (0.4 <= rand && rand < 0.6) {
+                for (let i = 0; i < getRandomArbitrary(3, 10); i++) {
+                    snake.removePart();
+                }
+            } else if (0.6 <= rand && rand <= 1.0) {
+                for (let i = 0; i < getRandomArbitrary(3, 10); i++) {
+                    snake.addPart();
+                }
+            }
+        } else {
+            snake.addPart();
+        }
+        this.init();
+    }
+
     onWindowResized() {
+        this.currentDrawPosition.set(this.currentPosition).mult(BODYSIZE).add(BODYSIZE / 2, BODYSIZE / 2);
         if (this.inSpawnAnimation) {
             this.currentSize = lerp(0, BODYSIZE, this.spawnAnimationTime / FOOD_SPAWN_TIME_MS);
-            let offset = (BODYSIZE - this.currentSize) / 2;
-            this.currentDrawPosition.set(this.currentPosition.x * BODYSIZE + offset, this.currentPosition.y * BODYSIZE + offset);
         } else {
-            this.currentDrawPosition.set(this.currentPosition.x * BODYSIZE, this.currentPosition.y * BODYSIZE);
             this.currentSize = BODYSIZE;
         }
     }
 
     update() {
         if (this.inSpawnAnimation == true) {
-            this.updateSpawnAnimation();;
+            this.updateSpawnAnimation();
         }
         else if (this.decaying) {
-            this.timeAlive += deltaTime;
             this.updateDecayAnimation();
-            if (this.timeAlive > this.currentMaxAliveTime) {
-                this.randomLocation();
-                NUM_FOOD_MISSED++;
-            }
         }
     }
 
     updateDecayAnimation() {
+        this.timeAlive += deltaTime;
+        if (this.timeAlive > this.currentMaxAliveTime) {
+            this.init();
+            NUM_FOOD_MISSED++;
+            return;
+        }
         this.currentSize = lerp(BODYSIZE, 0, this.timeAlive / this.currentMaxAliveTime);
-        let offset = (BODYSIZE - this.currentSize) / 2;
-        this.currentDrawPosition.set(this.currentPosition.x * BODYSIZE + offset, this.currentPosition.y * BODYSIZE + offset);
     }
 
     updateSpawnAnimation() {
         this.spawnAnimationTime += deltaTime;
         if (this.spawnAnimationTime >= FOOD_SPAWN_TIME_MS) {
-            this.currentDrawPosition.set(this.currentPosition.x * BODYSIZE, this.currentPosition.y * BODYSIZE);
             this.currentSize = BODYSIZE;
             this.inSpawnAnimation = false;
             return;
         }
         this.currentSize = lerp(0, BODYSIZE, this.spawnAnimationTime / FOOD_SPAWN_TIME_MS);
-        let offset = (BODYSIZE - this.currentSize) / 2;
-        this.currentDrawPosition.set(this.currentPosition.x * BODYSIZE + offset, this.currentPosition.y * BODYSIZE + offset);
     }
 
     show() {
-        rectMode(CORNER)
+        rectMode(CENTER);
         stroke(0);
         fill(this.currentColor);
         square(this.currentDrawPosition.x, this.currentDrawPosition.y, this.currentSize);
