@@ -235,7 +235,7 @@ const MIN_MOVETIME_MS = 40;
 const REMOVE_ANIMATION_TIME_MS = 250;
 const SPEED_DECAY = 0.125;
 const MAX_BOOST = 100;
-const SNAKE_BLIND_PROBABILITY = 0.075;
+const SNAKE_BLIND_PROBABILITY = 0.5;
 const SNAKE_BLIND_TIME = 7500;
 
 class Snake {
@@ -330,17 +330,17 @@ class Snake {
                 if (food.timeAlive <= food.currentMaxAliveTime * 0.7) {
                     this.head.startEatAnimation();
 
-                    if (this.blinded == false) {
+                    if (food.isMystery) {
                         if (Math.random() < SNAKE_BLIND_PROBABILITY) {
                             this.blinded = true;
                             this.blindTime = 0;
+                        } else {
+                            for (let i = 0; i < getRandomArbitrary(3, 10); i++) {
+                                this.addPart();
+                            }
                         }
                     }
-
-                    this.body.push(Bodypart.fromOther(this.body.at(-1)));
-                    if (this.body.length > this.highscore) {
-                        this.highscore = this.body.length;
-                    }
+                    this.addPart();
                 }
                 food.randomLocation();
                 break;
@@ -390,6 +390,13 @@ class Snake {
                     this.head.didLooparound = true;
                 }
                 break;
+        }
+    }
+
+    addPart() {
+        this.body.push(Bodypart.fromOther(this.body.at(-1)));
+        if (this.body.length > this.highscore) {
+            this.highscore = this.body.length;
         }
     }
 
@@ -675,6 +682,9 @@ function getRandomArbitrary(min, max) {
 const FOOD_SPAWN_TIME_MS = 300;
 const MIN_FOOD_ALIVE_TIME = 30000
 const MAX_FOOD_ALIVE_TIME = 100000;
+const STANDARD_FOOD_COLOR = "#ff0000";
+const MYSTERY_FOOD_COLOR = "#f0e800";
+const MYSTERY_PROBABILITY = 0.075;
 
 class Food {
     constructor() {
@@ -683,9 +693,12 @@ class Food {
         this.inSpawnAnimation = true;
         this.spawnAnimationTime = 0;
         this.currentSize = 0;
+        this.currentColor = STANDARD_FOOD_COLOR;
         this.decaying = false;
         this.timeAlive = 0;
         this.currentMaxAliveTime = getRandomArbitrary(MIN_FOOD_ALIVE_TIME, MAX_FOOD_ALIVE_TIME);
+
+        this.isMystery = false;
     }
 
     randomLocation() {
@@ -705,6 +718,15 @@ class Food {
             this.currentSize = 0;
             this.timeAlive = 0;
             this.currentMaxAliveTime = getRandomArbitrary(MIN_FOOD_ALIVE_TIME, MAX_FOOD_ALIVE_TIME);
+
+            this.isMystery = (Math.random() <= MYSTERY_PROBABILITY);
+            if (this.isMystery) {
+                this.currentColor = MYSTERY_FOOD_COLOR;
+                this.decaying = true;
+            } else {
+                this.currentColor = STANDARD_FOOD_COLOR;
+                this.decaying = false;
+            }
             break;
         } while (true);
     }
@@ -756,7 +778,7 @@ class Food {
     show() {
         rectMode(CORNER)
         stroke(0);
-        fill(255, 0, 0);
+        fill(this.currentColor);
         square(this.currentDrawPosition.x, this.currentDrawPosition.y, this.currentSize);
     }
 }
