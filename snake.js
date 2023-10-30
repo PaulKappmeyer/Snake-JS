@@ -20,11 +20,15 @@ const DARK_MODE_TEXT_FILL = "#FFFFFF";
 const LIGHT_MODE_BACKGROUND = "#FFFFFF"; //"#DCDCDC";
 const LIGHT_MODE_TEXT_FILL = "#000000";
 
+let pg_blind;
+
 function setup() {
     calcBODYSIZE();
     canvas = createCanvas(NUM_COLS * BODYSIZE, NUM_ROWS * BODYSIZE);
     canvas.parent(container);
     conatinerDiv = select("#" + container);
+
+    pg_blind = createGraphics(width, height);
 
     snake = new Snake();
 
@@ -64,6 +68,8 @@ function windowResized() {
     snake.onWindowResized(OLD_BODYSIZE);
 
     darkModeButton.position(width + 5, 0);
+
+    pg_blind = createGraphics(width, height);
 }
 
 function calcBODYSIZE() {
@@ -87,7 +93,9 @@ function draw() {
 
     // draw: background
     if (darkMode) {
-        background(DARK_MODE_BACKGROUND);
+        //background(DARK_MODE_BACKGROUND);
+        fill(DARK_MODE_BACKGROUND);
+        rect(0, 0, width, height);
     } else {
         background(LIGHT_MODE_BACKGROUND);
     }
@@ -101,12 +109,28 @@ function draw() {
     // draw: snake
     snake.show();
 
+    // draw: snake blinded overlay
+    if (snake.blinded == true) {
+        pg_blind.background(0, 0, 0, 255 * Math.pow((1 - snake.blindTime / SNAKE_BLIND_TIME), 0.075));
+        pg_blind.erase();
+        pg_blind.noStroke();
+        pg_blind.circle(snake.head.smoothPosition.x + BODYSIZE / 2, snake.head.smoothPosition.y + BODYSIZE / 2, min(width / 2, height / 2));
+        pg_blind.noErase();
+
+        image(pg_blind, 0, 0);
+        pg_blind.clear();
+    }
+
     // draw: text
     noStroke()
     if (darkMode) {
         fill(DARK_MODE_TEXT_FILL);
     } else {
-        fill(LIGHT_MODE_TEXT_FILL);
+        if (snake.blinded) {
+            fill(DARK_MODE_TEXT_FILL);
+        } else {
+            fill(LIGHT_MODE_TEXT_FILL);
+        }
     }
     textSize(12);
     textAlign(LEFT, CENTER);
@@ -145,7 +169,11 @@ function draw() {
         if (darkMode) {
             fill(DARK_MODE_TEXT_FILL);
         } else {
-            fill(LIGHT_MODE_TEXT_FILL);
+            if (snake.blinded) {
+                fill(DARK_MODE_TEXT_FILL);
+            } else {
+                fill(LIGHT_MODE_TEXT_FILL);
+            }
         }
         textSize(100);
         textAlign(CENTER, CENTER);
@@ -207,6 +235,8 @@ const MIN_MOVETIME_MS = 40;
 const REMOVE_ANIMATION_TIME_MS = 250;
 const SPEED_DECAY = 0.125;
 const MAX_BOOST = 100;
+const SNAKE_BLIND_PROBABILITY = 0.075;
+const SNAKE_BLIND_TIME = 7500;
 
 class Snake {
     constructor() {
@@ -226,9 +256,21 @@ class Snake {
         this.movetime_ms = MAX_MOVETIME_MS;
         this.move_animation_time_ms = MAX_MOVETIME_MS;
         this.moveLerpAmount = 0;
+
+        this.blinded = false;
+        this.blindTime = 0;
     }
 
     update() {
+        // update: blind animation
+        if (this.blinded == true) {
+            this.blindTime += deltaTime;
+
+            if (this.blindTime >= SNAKE_BLIND_TIME) {
+                this.blinded = false;
+            }
+        }
+
         // update: refill boost capacity
         this.currentBoostCapacity = constrain(this.currentBoostCapacity + SPEED_DECAY * deltaTime, 0, MAX_BOOST);
 
@@ -287,11 +329,18 @@ class Snake {
             if (this.head.currentPosition.equals(food.currentPosition)) {
                 if (food.timeAlive <= food.currentMaxAliveTime * 0.7) {
                     this.head.startEatAnimation();
+
+                    if (this.blinded == false) {
+                        if (Math.random() < SNAKE_BLIND_PROBABILITY) {
+                            this.blinded = true;
+                            this.blindTime = 0;
+                        }
+                    }
+
                     this.body.push(Bodypart.fromOther(this.body.at(-1)));
                     if (this.body.length > this.highscore) {
                         this.highscore = this.body.length;
                     }
-
                 }
                 food.randomLocation();
                 break;
