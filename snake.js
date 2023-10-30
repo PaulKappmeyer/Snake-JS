@@ -110,7 +110,7 @@ function draw() {
     }
     textSize(12);
     textAlign(LEFT, CENTER);
-    text("Länge: " + snake.body.length, 5, 10);
+    text("Length: " + snake.body.length, 5, 10);
     text("Highscore: " + snake.highscore, 5, 25);
     text("Speed: ", 5, 40);
     text("Boost: ", 5, 55);
@@ -634,7 +634,7 @@ class Food {
         this.inSpawnAnimation = true;
         this.spawnAnimationTime = 0;
         this.currentSize = 0;
-        this.decaying = true;
+        this.decaying = false;
         this.timeAlive = 0;
         this.currentMaxAliveTime = getRandomArbitrary(MIN_FOOD_ALIVE_TIME, MAX_FOOD_ALIVE_TIME);
     }
