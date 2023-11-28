@@ -145,6 +145,7 @@ function draw() {
     // draw: speed HUD
     stroke(0);
     noFill()
+    rectMode(CORNER)
     rect(50, 35, 70, 10);
 
     fill(100, 0, 0, 150);
